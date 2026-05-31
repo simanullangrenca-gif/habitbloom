@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HabitBloom — Tumbuhkan Kebiasaan Baikmu</title>
+    <!-- Tailwind CSS untuk tata letak modern -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js untuk grafik analitik pastel yang indah -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Canvas Confetti untuk efek selebrasi saat selesai kebiasaan -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Font Awesome untuk ikon yang bersih -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --soft-pink: #FFD6E7;
+            --lavender: #E5D4FF;
+            --baby-blue: #D6EEFF;
+            --mint-green: #D8FFE3;
+            --cream: #FFF9F2;
+            --text-dark: #4A4A4A;
+        }
+
+        body {
+            background-color: var(--cream);
+            color: var(--text-dark);
+            font-family: 'Quicksand', 'Segoe UI', system-ui, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Gaya Tema yang diubah via JS */
+        body.dark-mode {
+            --cream: #1A1A1E;
+            --text-dark: #F5F5F7;
+            background-color: #121214;
+        }
+
+        body.pastel-mode {
+            background: linear-gradient(135deg, var(--soft-pink), var(--baby-blue), var(--lavender));
+        }
+
+        /* UI Glassmorphism Premium */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.dark-mode .glass-card {
+            background: rgba(30, 30, 34, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.08);
+        }
+
+        /* Mekanisme Navigasi */
+        .nav-btn {
+            transition: all 0.2s ease;
+            border-radius: 16px;
+        }
+        .nav-btn.active {
+            background-color: var(--baby-blue);
+            color: #1E40AF;
+            font-weight: 700;
+        }
+        body.dark-mode .nav-btn.active {
+            background-color: #2D2D35;
+            color: #38BDF8;
+        }
+
+        /* Animasi Kelinci Dinamis */
+        .bunny-container {
+            position: relative;
+            display: inline-block;
+        }
+        .bunny-animation {
+            animation: bunnyBounce 2.4s ease-in-out infinite;
+            display: inline-block;
+            transform-origin: bottom center;
+        }
+        @keyframes bunnyBounce {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(-12px) scaleY(1.02); }
+            70% { transform: translateY(0) scaleY(0.98); }
+        }
+        .bunny-blink {
+            animation: bunnyBlink 4s infinite;
+        }
+        @keyframes bunnyBlink {
+            0%, 90%, 100% { opacity: 1; }
+            95% { opacity: 0.1; }
+        }
+
+        /* Grid Heatmap Kalender */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .heatmap-cell:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        /* Scrollbar Kustom */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--lavender); border-radius: 10px; }
+        body.dark-mode ::-webkit-scrollbar-thumb { background: #3E3E4A; }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen overflow-hidden">
+
+    <!-- NAVIGASI SIDEBAR (Desktop) & NAVIGASI BAWAH (Mobile) -->
+    <nav class="w-full md:w-64 bg-white/60 dark:bg-[#1E1E24]/60 backdrop-blur-md border-b md:border-b-0 md:border-r border-gray-200/50 dark:border-gray-800/50 p-4 flex flex-row md:flex-col justify-between items-center z-50 order-2 md:order-1">
+        <div class="flex md:flex-col items-center md:items-start w-full justify-between md:justify-start gap-4">
+            <!-- Logo Aplikasi -->
+            <div class="text-xl md:text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent flex items-center gap-2 mb-0 md:mb-8">
+                <i class="fas fa-seedling text-pink-400"></i>
+                <span class="hidden sm:inline">HabitBloom</span>
+            </div>
+            
+            <!-- Wadah Menu Navigasi -->
+            <div class="flex flex-row md:flex-col gap-1 sm:gap-2 w-full justify-around md:justify-start">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active flex items-center gap-3 px-3 py-2.5 sm:px-4 text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-th-large text-lg"></i> <span class="hidden lg:inline">Beranda</span>
+                </button>
+                <button onclick="switchTab('tracker')" id="nav-tracker" class="nav-btn flex items-center gap-3 px-3 py-2.5 sm:px-4 text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-calendar-check text-lg"></i> <span class="hidden lg:inline">Kebiasaan</span>
+                </button>
+                <button onclick="switchTab('journal')" id="nav-journal" class="nav-btn flex items-center gap-3 px-3 py-2.5 sm:px-4 text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-book-open text-lg"></i> <span class="hidden lg:inline">Jurnal</span>
+                </button>
+                <button onclick="switchTab('mood')" id="nav-mood" class="nav-btn flex items-center gap-3 px-3 py-2.5 sm:px-4 text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-smile text-lg"></i> <span class="hidden lg:inline">Suasana Hati</span>
+                </button>
+                <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn flex items-center gap-3 px-3 py-2.5 sm:px-4 text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-chart-pie text-lg"></i> <span class="hidden lg:inline">Analitik</span>
+                </button>
+                <button onclick="switchTab('shop')" id="nav-shop" class="nav-btn flex items-center gap-3 px-3 py-2.5 sm:px-4 text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-shopping-bag text-lg"></i> <span class="hidden lg:inline">Toko Koin</span>
+                </button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex items-center gap-3 px-3 py-2.5 sm:px-4 text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-cog text-lg"></i> <span class="hidden lg:inline">Pengaturan</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Widget Status Pengguna di Bagian Bawah Sidebar -->
+        <div class="hidden md:block w-full mt-auto pt-4 border-t border-gray-200/40 dark:border-gray-800/40">
+            <div class="bg-gradient-to-br from-pink-100 to-purple-100 dark:from-purple-950/40 dark:to-pink-950/40 p-4 rounded-2xl text-center">
+                <span class="text-xs uppercase font-bold tracking-wider text-purple-600 dark:text-purple-300" id="profileLevelName">Pemula</span>
+                <div class="text-xl font-bold text-gray-800 dark:text-white mt-0.5">Level <span id="profileLevelNum">1</span></div>
+                <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
+                    <div id="profileXpBar" class="h-full bg-gradient-to-r from-pink-400 to-purple-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div class="text-[10px] text-gray-500 dark:text-gray-400 mt-1"><span id="profileXpText">0/500</span> XP</div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- WADAH KONTEN UTAMA -->
+    <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 order-1 md:order-2 pb-24 md:pb-8">
+        
+        <!-- STRIP PROFIL HEADER -->
+        <header class="flex justify-between items-center mb-8 bg-white/40 dark:bg-zinc-900/40 p-4 rounded-3xl backdrop-blur-sm">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold" id="greetingMessage">Selamat pagi, Tukang Kebun! ✨</h1>
+                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Mari kita rawat kebiasaanmu hari ini.</p>
+            </div>
+            <div class="flex items-center gap-3 sm:gap-4">
+                <div class="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-950/50 px-3 py-1.5 rounded-full text-amber-700 dark:text-amber-300 font-bold text-sm">
+                    <i class="fas fa-coins text-amber-500"></i> <span id="headerCoins">0</span> Koin
+                </div>
+                <div class="flex items-center gap-1.5 bg-pink-100 dark:bg-pink-950/50 px-3 py-1.5 rounded-full text-pink-700 dark:text-pink-300 font-bold text-sm">
+                    <i class="fas fa-fire text-pink-500"></i> <span id="headerStreak">0</span> Hari Streak
+                </div>
+            </div>
+        </header>
+
+        <!-- 1. BERANDA (DASHBOARD) -->
+        <section id="view-dashboard" class="tab-content space-y-8">
+            <!-- Wadah Maskot dan Evolusi Tanaman -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Kartu Kelinci Sahabat Interaktif -->
+                <div class="glass-card p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <div class="absolute top-3 right-3 text-xs bg-white/80 dark:bg-zinc-800/80 px-2.5 py-1 rounded-full font-medium" id="bunnyStateBadge">Senang</div>
+                    <div class="bunny-container my-4">
+                        <span id="mainBunnyAvatar" class="bunny-animation text-7xl sm:text-8xl select-none">🐰</span>
+                    </div>
+                    <h3 class="font-bold text-lg">Barnaby si Kelinci</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 max-w-[200px] mt-1" id="bunnySpeechBubble">"Kamu luar biasa! Terus siram kebiasaan baikmu ya!"</p>
+                    <button onclick="interactWithBunny()" class="mt-4 text-xs bg-pink-200 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 font-bold px-4 py-2 rounded-full hover:scale-105 active:scale-95 transition">Elus Barnaby</button>
+                </div>
+
+                <!-- Kartu Pertumbuhan Tanaman Kebiasaan -->
+                <div class="glass-card p-6 lg:col-span-2 flex flex-col sm:flex-row items-center gap-6 relative">
+                    <div class="text-8xl sm:text-9xl p-4 select-none filter drop-shadow-md transition-all duration-700 transform hover:scale-110" id="mainPlantAvatar">🌱</div>
+                    <div class="flex-1 space-y-2 w-full">
+                        <div class="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Ekosistem Taman</div>
+                        <h3 class="text-2xl font-bold">Pohon Kebiasaanmu: <span id="plantStageName" class="text-emerald-500">Tunas</span></h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Tamanmu akan tumbuh tinggi dan mekar dengan indah saat kamu menyelesaikan kebiasaan, menjaga streak, dan mencapai target konsistensi.</p>
+                        <div class="pt-2">
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <span>Progres Level Pertumbuhan</span>
+                                <span id="plantProgressPercent">40%</span>
+                            </div>
+                            <div class="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div id="plantProgressBar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-1000" style="width: 40%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Statistik Cepat -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-4 text-center">
+                    <div class="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Progres Target Harian</div>
+                    <div class="text-2xl font-black text-blue-500 mt-1" id="dashDailyProgress">0%</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Penguasaan Mingguan</div>
+                    <div class="text-2xl font-black text-purple-500 mt-1" id="dashWeeklyProgress">0%</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Konsistensi Keseluruhan</div>
+                    <div class="text-2xl font-black text-emerald-500 mt-1" id="dashOverallConsistency">0%</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Total Skor XP</div>
+                    <div class="text-2xl font-black text-pink-500 mt-1" id="dashTotalXp">0</div>
+                </div>
+            </div>
+
+            <!-- Tata Letak Misi & Heatmap Kalender -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Kartu Misi Aktif -->
+                <div class="glass-card p-6 lg:col-span-2 space-y-4">
+                    <h3 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-scroll text-yellow-500"></i> Misi Mekar Aktif</h3>
+                    <div id="questsContainer" class="space-y-3">
+                        <!-- Diisi secara otomatis oleh JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Matrix Aktivitas Bergaya GitHub -->
+                <div class="glass-card p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400">Grid Aktivitas</h3>
+                        <span class="text-xs text-purple-500 font-semibold">4 Minggu Terakhir</span>
+                    </div>
+                    <div class="heatmap-grid" id="dashboardHeatmap">
+                        <!-- 28 blok kotak dimasukkan secara dinamis -->
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-400 pt-1">
+                        <span>Kurang Aktif</span>
+                        <span>Sangat Mekar</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. HABIT TRACKER (PENGATUR KEBIASAAN) -->
+        <section id="view-tracker" class="tab-content hidden space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold">Pusat Kebun Rutinitas</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Budidayakan, pantau, dan konfigurasikan kebiasaan harianmu.</p>
+                </div>
+                <button onclick="openHabitModal()" class="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-pink-400 to-purple-500 text-white font-bold rounded-2xl shadow-md hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-plus"></i> Buat Kebiasaan Baru
+                </button>
+            </div>
+
+            <!-- Baris Filter Kategori -->
+            <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-none" id="habitCategoryFilters">
+                <button onclick="filterHabits('all')" class="px-4 py-2 bg-white dark:bg-zinc-800 rounded-full text-xs font-bold whitespace-nowrap border border-gray-200/50 dark:border-gray-700/50 shadow-sm active hover:bg-gray-50">Semua</button>
+            </div>
+
+            <!-- Grid Tampilan Utama Kebiasaan -->
+            <div id="habitsDisplayGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Konten item dirender secara dinamis -->
+            </div>
+        </section>
+
+        <!-- 3. JURNAL HARIAN -->
+        <section id="view-journal" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Formulir Input Jurnal -->
+                <div class="glass-card p-6 h-fit space-y-4">
+                    <h2 class="text-xl font-bold">Refleksi Pemikiran Baru</h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Catatan Rasa Syukur</label>
+                            <input type="text" id="journalGratitude" placeholder="Satu hal yang kamu syukuri hari ini..." class="w-full p-3 rounded-xl border bg-white/50 dark:bg-zinc-800/50 dark:border-zinc-700 text-sm focus:outline-pink-300">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Refleksi Mendalam / Catatan</label>
+                            <textarea id="journalText" rows="4" placeholder="Bagaimana harimu berjalan? Target apa yang berhasil dicapai?" class="w-full p-3 rounded-xl border bg-white/50 dark:bg-zinc-800/50 dark:border-zinc-700 text-sm focus:outline-pink-300"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Label / Tags (Pisahkan dengan Koma)</label>
+                            <input type="text" id="journalTags" placeholder="belajar, produktif, olahraga" class="w-full p-3 rounded-xl border bg-white/50 dark:bg-zinc-800/50 dark:border-zinc-700 text-sm focus:outline-pink-300">
+                        </div>
+                        <button onclick="saveJournalEntry()" class="w-full py-3 bg-purple-500 text-white font-bold rounded-xl shadow hover:bg-purple-600 transition">Simpan Catatan Jurnal (+15 XP)</button>
+                    </div>
+                </div>
+
+                <!-- Daftar Riwayat Jurnal Log -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xl font-bold">Buku Catatan Refleksi</h3>
+                        <input type="text" id="journalSearch" oninput="renderJournal()" placeholder="Cari catatan..." class="p-2 text-xs rounded-xl border bg-white dark:bg-zinc-800 dark:border-zinc-700">
+                    </div>
+                    <div id="journalContainer" class="space-y-4">
+                        <!-- Entri diisi secara dinamis -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. PELACAK SUASANA HATI (MOOD TRACKER) -->
+        <section id="view-mood" class="tab-content hidden space-y-8">
+            <div class="glass-card p-8 text-center max-w-2xl mx-auto space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold">Bagaimana perasaanmu saat ini?</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Mencatat suasana hati membantu menganalisis keselarasan emosi dengan rutinitas harianmu.</p>
+                </div>
+                <div class="grid grid-cols-3 sm:grid-cols-7 gap-3 justify-center">
+                    <button onclick="logMood('🥰', 'Luar Biasa')" class="p-3 bg-white dark:bg-zinc-800 rounded-2xl hover:scale-110 transition active:scale-95 shadow-sm text-center">
+                        <div class="text-3xl">🥰</div> <div class="text-[10px] font-bold mt-1 text-gray-500">Luar Biasa</div>
+                    </button>
+                    <button onclick="logMood('😊', 'Bahagia')" class="p-3 bg-white dark:bg-zinc-800 rounded-2xl hover:scale-110 transition active:scale-95 shadow-sm text-center">
+                        <div class="text-3xl">😊</div> <div class="text-[10px] font-bold mt-1 text-gray-500">Bahagia</div>
+                    </button>
+                    <button onclick="logMood('😌', 'Tenang')" class="p-3 bg-white dark:bg-zinc-800 rounded-2xl hover:scale-110 transition active:scale-95 shadow-sm text-center">
+                        <div class="text-3xl">😌</div> <div class="text-[10px] font-bold mt-1 text-gray-500">Tenang</div>
+                    </button>
+                    <button onclick="logMood('😐', 'Biasa Saja')" class="p-3 bg-white dark:bg-zinc-800 rounded-2xl hover:scale-110 transition active:scale-95 shadow-sm text-center">
+                        <div class="text-3xl">😐</div> <div class="text-[10px] font-bold mt-1 text-gray-500">Biasa Saja</div>
+                    </button>
+                    <button onclick="logMood('😔', 'Sedih')" class="p-3 bg-white dark:bg-zinc-800 rounded-2xl hover:scale-110 transition active:scale-95 shadow-sm text-center">
+                        <div class="text-3xl">😔</div> <div class="text-[10px] font-bold mt-1 text-gray-500">Sedih</div>
+                    </button>
+                    <button onclick="logMood('😫', 'Stres')" class="p-3 bg-white dark:bg-zinc-800 rounded-2xl hover:scale-110 transition active:scale-95 shadow-sm text-center">
+                        <div class="text-3xl">😫</div> <div class="text-[10px] font-bold mt-1 text-gray-500">Stres</div>
+                    </button>
+                    <button onclick="logMood('😵', 'Lelah')" class="p-3 bg-white dark:bg-zinc-800 rounded-2xl hover:scale-110 transition active:scale-95 shadow-sm text-center">
+                        <div class="text-3xl">😵</div> <div class="text-[10px] font-bold mt-1 text-gray-500">Lelah</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Riwayat Mood & Distribusi Grafik -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                <div class="glass-card p-6 space-y-3">
+                    <h3 class="font-bold">Riwayat Suasana Hati Terbaru</h3>
+                    <div class="divide-y divide-gray-100 dark:divide-zinc-800 max-h-64 overflow-y-auto pr-2" id="moodHistoryList">
+                        <!-- Diisi secara dinamis saat runtime -->
+                    </div>
+                </div>
+                <div class="glass-card p-6 flex flex-col items-center justify-center">
+                    <h3 class="font-bold self-start mb-4">Grafik Distribusi Mood</h3>
+                    <div class="w-full max-w-[240px]">
+                        <canvas id="moodDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. ANALYTICS DASHBOARD (MESIN ANALITIK) -->
+        <section id="view-analytics" class="tab-content hidden space-y-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold">Mesin Metrik & Analitik</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Grafik rincian riwayat untuk memantau efisiensi performa kebiasaanmu.</p>
+                </div>
+                <button onclick="window.print()" class="px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-2">
+                    <i class="fas fa-print"></i> Cetak Dokumen Laporan Bulanan
+                </button>
+            </div>
+
+            <!-- Panel Metrik Utama Analitik -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-4">
+                    <div class="text-xs text-gray-400 font-bold uppercase">Kebiasaan Terbaik</div>
+                    <div class="text-lg font-bold text-gray-800 dark:text-white mt-1 truncate" id="analyticsBestHabit">—</div>
+                </div>
+                <div class="glass-card p-4">
+                    <div class="text-xs text-gray-400 font-bold uppercase">Streak Terpanjang</div>
+                    <div class="text-lg font-bold text-gray-800 dark:text-white mt-1" id="analyticsLongestStreak">0 Hari</div>
+                </div>
+                <div class="glass-card p-4">
+                    <div class="text-xs text-gray-400 font-bold uppercase">Hari Paling Produktif</div>
+                    <div class="text-lg font-bold text-gray-800 dark:text-white mt-1" id="analyticsBestDay">—</div>
+                </div>
+                <div class="glass-card p-4">
+                    <div class="text-xs text-gray-400 font-bold uppercase">Kategori Teraktif</div>
+                    <div class="text-lg font-bold text-gray-800 dark:text-white mt-1" id="analyticsTopCategory">—</div>
+                </div>
+            </div>
+
+            <!-- Tata Letak Grafik Ganda -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-card p-6">
+                    <h3 class="font-bold mb-4 text-sm text-purple-600 uppercase tracking-wider">Dinamika Penyelesaian Mingguan</h3>
+                    <canvas id="chartWeeklyAnalytics" class="w-full"></canvas>
+                </div>
+                <div class="glass-card p-6">
+                    <h3 class="font-bold mb-4 text-sm text-pink-600 uppercase tracking-wider">Distribusi Kontribusi Kategori</h3>
+                    <div class="max-w-[280px] mx-auto">
+                        <canvas id="chartCategoryAnalytics"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. TOKO REWARD KOIN VIRTUAL -->
+        <section id="view-shop" class="tab-content hidden space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold">Butik Toko Hadiah Bloom</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Tukarkan saldo emas koin yang kamu dapatkan untuk membuka latar belakang tema dan kosmetik aksesori kelinci.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="shopItemsDisplayGrid">
+                <!-- Komponen item pasar diisi secara otomatis oleh JS -->
+            </div>
+        </section>
+
+        <!-- 7. PENGATURAN APLIKASI -->
+        <section id="view-settings" class="tab-content hidden space-y-6 max-w-3xl mx-auto">
+            <div class="glass-card p-6 space-y-6 divide-y divide-gray-100 dark:divide-zinc-800">
+                <!-- Kontrol Kustomisasi Tema Antarmuka -->
+                <div class="pb-6">
+                    <h3 class="text-lg font-bold mb-3 flex items-center gap-2"><i class="fas fa-palette text-pink-400"></i> Tema Kustom Antarmuka</h3>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="setThemeStyle('light')" class="p-4 rounded-xl border font-bold text-sm text-center bg-white border-gray-300 text-gray-800">Terang Minimal</button>
+                        <button onclick="setThemeStyle('dark')" class="p-4 rounded-xl border font-bold text-sm text-center bg-zinc-900 border-zinc-700 text-white">Malam Gelap</button>
+                        <button onclick="setThemeStyle('pastel')" class="p-4 rounded-xl border font-bold text-sm text-center bg-gradient-to-r from-pink-200 to-blue-200 border-purple-300 text-indigo-950">Vibrant Pastel</button>
+                    </div>
+                </div>
+
+                <!-- Operasi Data Cadangan LocalStorage -->
+                <div class="pt-6 pb-6">
+                    <h3 class="text-lg font-bold mb-3 flex items-center gap-2"><i class="fas fa-database text-purple-400"></i> Operasi Data Cadangan</h3>
+                    <p class="text-xs text-gray-500 mb-3">Ekspor atau Impor file status penyimpanan sistem ke komputer lokal secara instan kapan saja.</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="exportApplicationJSON()" class="px-4 py-2.5 bg-blue-500 text-white font-bold text-xs rounded-xl hover:bg-blue-600 transition">Cadangkan Data (Export)</button>
+                        <label class="px-4 py-2.5 bg-purple-500 text-white font-bold text-xs rounded-xl hover:bg-purple-600 transition cursor-pointer">
+                            Pulihkan Data (Import) <input type="file" id="importJsonFileInput" onchange="importApplicationJSON(event)" class="hidden">
+                        </label>
+                        <button onclick="clearResetSystemData()" class="px-4 py-2.5 bg-red-500 text-white font-bold text-xs rounded-xl hover:bg-red-600 transition">Hapus & Reset Aplikasi</button>
+                    </div>
+                </div>
+
+                <!-- Galeri Pameran Lencana Pencapaian -->
+                <div class="pt-6">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fas fa-trophy text-amber-500"></i> Lencana Pencapaian yang Diraih</h3>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 gap-4 text-center" id="settingsBadgesDisplayGrid">
+                        <!-- Diisi secara otomatis berdasarkan profil penguncian pengguna -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- MODAL POPUP FORMULIR EDIT/BUAT KEBIASAAN BARU -->
+    <div id="habitCreationFormModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+        <div class="bg-white dark:bg-zinc-900 w-full max-w-md p-6 rounded-3xl shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold" id="modalFormActionTitle">Konfigurasi Rutinitas Kebiasaan</h3>
+                <button onclick="closeHabitModal()" class="text-gray-400 hover:text-gray-600 text-lg"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <input type="hidden" id="modalHabitIdTarget">
+            
+            <div class="space-y-3 text-sm">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Nama Kebiasaan / Judul</label>
+                    <input type="text" id="formHabitName" placeholder="Minum 3L Air, Belajar Matematika, Olahraga..." class="w-full p-3 bg-gray-50 dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Grup Kategori</label>
+                        <select id="formHabitCategory" class="w-full p-3 bg-gray-50 dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl focus:outline-none">
+                            <option value="Belajar">Belajar</option>
+                            <option value="Kesehatan">Kesehatan</option>
+                            <option value="Produktivitas">Produktivitas</option>
+                            <option value="Keuangan">Keuangan</option>
+                            <option value="Kebugaran">Kebugaran</option>
+                            <option value="Membaca">Membaca</option>
+                            <option value="Pengembangan Diri">Pengembangan Diri</option>
+                            <option value="Spiritual">Spiritual</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Tingkat Prioritas</label>
+                        <select id="formHabitPriority" class="w-full p-3 bg-gray-50 dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl focus:outline-none">
+                            <option value="Rendah">Rendah</option>
+                            <option value="Sedang">Sedang</option>
+                            <option value="Tinggi">Tinggi</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Tingkat Kesulitan</label>
+                        <select id="formHabitDifficulty" class="w-full p-3 bg-gray-50 dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl focus:outline-none">
+                            <option value="Mudah">Mudah (+20 XP)</option>
+                            <option value="Normal">Normal (+40 XP)</option>
+                            <option value="Sulit">Sulit (+60 XP)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Waktu Pengingat Target</label>
+                        <input type="time" id="formHabitTime" class="w-full p-3 bg-gray-50 dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl focus:outline-none" value="08:00">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeHabitModal()" class="flex-1 py-3 bg-gray-100 dark:bg-zinc-800 font-bold rounded-xl text-xs transition">Batal</button>
+                <button onclick="commitHabitFormToState()" class="flex-1 py-3 bg-gradient-to-r from-pink-400 to-purple-500 text-white font-bold rounded-xl text-xs shadow-md transition">Simpan Kebiasaan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIKA SKRIP INTI SISTEM APLIKASI -->
+    <script>
+        // STRUKTUR KONTEKS STATE DATA GLOBAL
+        let state = {
+            habits: [],
+            journal: [],
+            moodLogs: [],
+            shopInventory: [],
+            xp: 0,
+            coins: 100, // Anggaran saldo awal pengguna baru
+            streak: 0,
+            longestStreak: 0,
+            level: 1,
+            activeFilter: 'all',
+            theme: 'light',
+            historyMatrix: {} // Melacak data log aktivitas per kunci tanggal kalender
+        };
+
+        // KONSTANTA INTI MESIN ENGINE
+        const COMPANION_EMOJIS = { SLEEPING: '😴', HAPPY: '😊', EXCITED: '🤩', CELEBRATING: '🎉', CHAMPION: '👑' };
+        const PLANT_STAGES = [
+            { threshold: 0, icon: '🌰', name: 'Biji' },
+            { threshold: 300, icon: '🌱', name: 'Tunas' },
+            { threshold: 1000, icon: '🌿', name: 'Tanaman Muda' },
+            { threshold: 2500, icon: '🌳', name: 'Pohon Rindang' },
+            { threshold: 5000, icon: '🌸', name: 'Pohon Berbunga Indah' }
+        ];
+        const LEVEL_TITLES = [
+            "Pemula", "Konsisten", "Produktif", "Pakar", 
+            "Master", "Legenda", "Penjaga Bloom", "Pelindung Mitos"
+        ];
+        const SHOP_MARKETPLACE = [
+            { id: 'item_rose_theme', name: 'Tema Latar Belakang Mawar', cost: 80, type: 'tema', icon: '🌸', acquired: false },
+            { id: 'item_bunny_hat', name: 'Mahkota Emas Aksesori Kelinci', cost: 150, type: 'aksesori', icon: '👑', acquired: false },
+            { id: 'item_bg_music', name: 'Paket Musik Santai Ambient', cost: 200, type: 'musik', icon: '🎵', acquired: false },
+            { id: 'item_cactus_seed', name: 'Benih Kaktus Gurun Langka', cost: 50, type: 'tanaman', icon: '🌵', acquired: false },
+            { id: 'item_star_stickers', name: 'Paket Stiker Kosmik Berkilau', cost: 100, type: 'stiker', icon: '✨', acquired: false }
+        ];
+        const REWARD_BADGES = [
+            { id: 'badge_first', name: 'Langkah Pertama', desc: 'Menanam benih kebiasaan pertama.', icon: '🌟', condition: s => s.habits.length > 0 },
+            { id: 'badge_streak_7', name: 'Api Konsistensi 7 Hari', desc: 'Mempertahankan 7 hari streak aktif.', icon: '🔥', condition: s => s.longestStreak >= 7 },
+            { id: 'badge_streak_30', name: 'Raja Kosmos 30 Hari', desc: 'Mempertahankan 30 hari streak aktif.', icon: '🚀', condition: s => s.longestStreak >= 30 },
+            { id: 'badge_study_master', name: 'Suhu Cendekia Belajar', desc: 'Menyelesaikan kebiasaan kategori belajar lebih dari 3 kali.', icon: '📚', condition: s => s.habits.filter(h => h.category === 'Belajar' && h.completionsCount > 3).length > 0 },
+            { id: 'badge_bloom_champ', name: 'Juara Kebun Bloom', desc: 'Mencapai puncak skala pertumbuhan XP 2500.', icon: '🌸', condition: s => s.xp >= 2500 }
+        ];
+
+        // LOGIKA PENYALUR AWAL SIKLUS HIDUP APLIKASI
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStateFromLocalStorage();
+            generateDynamicMockHistoryMatrix(); // Membuat titik data peta panas kalender historis yang mulus
+            updateApplicationDOM();
+            renderChartsEngines();
+            setGreetingMessage();
+        });
+
+        function setGreetingMessage() {
+            const hr = new Date().getHours();
+            let msg = "Selamat pagi, Tukang Kebun! ✨";
+            if (hr >= 12 && hr < 17) msg = "Selamat siang, Tukang Kebun! ☀️";
+            else if (hr >= 17) msg = "Selamat malam, Tukang Kebun! 🌙";
+            document.getElementById('greetingMessage').innerText = msg;
+        }
+
+        function loadStateFromLocalStorage() {
+            const raw = localStorage.getItem('habit_bloom_premium_save');
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    state = { ...state, ...parsed };
+                } catch (e) { console.error("Gagal memuat file penyimpanan lokal otomatis, mengatur ulang ke default", e); }
+            } else {
+                // Inisialisasi basis data mock contoh kebiasaan pertama kali mendarat
+                state.habits = [
+                    { id: 'h1', name: 'Meditasi Ketenangan Pagi', category: 'Kesehatan', priority: 'Tinggi', difficulty: 'Mudah', time: '07:00', completionsCount: 4, lastCompletedDate: null, archived: false },
+                    { id: 'h2', name: 'Latihan Coding / Belajar Mandiri', category: 'Belajar', priority: 'Sedang', difficulty: 'Sulit', time: '10:00', completionsCount: 1, lastCompletedDate: null, archived: false },
+                    { id: 'h3', name: 'Mencatat Log Buku Keuangan', category: 'Keuangan', priority: 'Rendah', difficulty: 'Normal', time: '21:00', completionsCount: 0, lastCompletedDate: null, archived: false }
+                ];
+                state.shopInventory = [...SHOP_MARKETPLACE];
+            }
+            if (!state.shopInventory || state.shopInventory.length === 0) state.shopInventory = [...SHOP_MARKETPLACE];
+            setThemeStyle(state.theme || 'light');
+        }
+
+        function persistState() {
+            localStorage.setItem('habit_bloom_premium_save', JSON.stringify(state));
+        }
+
+        // SISTEM ROUTING TAB HALAMAN
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabId}`).classList.add('active');
+
+            if (tabId === 'analytics') renderChartsEngines();
+        }
+
+        // PIPA UTAMA PEMBARUAN TAMPILAN DOM DATA
+        function updateApplicationDOM() {
+            // Sinkronisasi statistik header
+            document.getElementById('headerCoins').innerText = state.coins;
+            document.getElementById('headerStreak').innerText = state.streak;
+
+            // Algoritma perhitungan level pengguna
+            state.level = Math.floor(state.xp / 500) + 1;
+            const lvlName = LEVEL_TITLES[Math.min(state.level - 1, LEVEL_TITLES.length - 1)];
+            const currentLvlXpFloor = (state.level - 1) * 500;
+            const insideLevelXp = state.xp - currentLvlXpFloor;
+            const levelPercentage = Math.min((insideLevelXp / 500) * 100, 100);
+
+            // Perbarui elemen tampilan profil sisi kiri bawah
+            document.getElementById('profileLevelName').innerText = lvlName;
+            document.getElementById('profileLevelNum').innerText = state.level;
+            document.getElementById('profileXpBar').style.width = `${levelPercentage}%`;
+            document.getElementById('profileXpText').innerText = `${insideLevelXp}/500`;
+
+            // Sinkronisasi data ke panel beranda utama
+            document.getElementById('dashTotalXp').innerText = state.xp;
+            
+            // Hitung persentase penyelesaian harian saat ini
+            const activeToday = state.habits.filter(h => !h.archived);
+            const doneToday = activeToday.filter(h => {
+                const todayStr = new Date().toISOString().split('T')[0];
+                return h.lastCompletedDate === todayStr;
+            });
+            const dailyRate = activeToday.length ? Math.round((doneToday.length / activeToday.length) * 100) : 0;
+            document.getElementById('dashDailyProgress').innerText = `${dailyRate}%`;
+
+            // Proses perhitungan evolusi tumbuhan berkebun
+            let currentPlant = PLANT_STAGES[0];
+            for (let i = PLANT_STAGES.length - 1; i >= 0; i--) {
+                if (state.xp >= PLANT_STAGES[i].threshold) {
+                    currentPlant = PLANT_STAGES[i];
+                    break;
+                }
+            }
+            document.getElementById('mainPlantAvatar').innerText = currentPlant.icon;
+            document.getElementById('plantStageName').innerText = currentPlant.name;
+            
+            // Render persentase teks metrik lainnya
+            document.getElementById('dashOverallConsistency').innerText = `${Math.min(100, Math.round((state.longestStreak / 30) * 100))}%`;
+            document.getElementById('dashWeeklyProgress').innerText = `${Math.min(100, Math.round((state.habits.reduce((acc, h) => acc + (h.completionsCount || 0), 0) / 20) * 100))}%`;
+
+            // Jalankan sub-fungsi render elemen
+            renderDashboardQuests();
+            renderDashboardHeatmap();
+            renderHabitsList();
+            renderJournal();
+            renderMoodView();
+            renderShopUI();
+            renderBadgesGrid();
+        }
+
+        // SISTEM ALUR KERJA LIST KEBIASAAN
+        function renderHabitsList() {
+            const container = document.getElementById('habitsDisplayGrid');
+            const categoriesContainer = document.getElementById('habitCategoryFilters');
+            
+            // Ambil daftar kategori unik dari data state saat ini
+            const categories = ['all', ...new Set(state.habits.map(h => h.category))];
+            categoriesContainer.innerHTML = categories.map(cat => {
+                const isAct = state.activeFilter === cat;
+                const displayText = cat === 'all' ? 'Semua Kebiasaan' : cat;
+                return `<button onclick="filterHabits('${cat}')" class="px-4 py-1.5 rounded-full text-xs font-bold transition ${isAct ? 'bg-pink-400 text-white shadow' : 'bg-white dark:bg-zinc-800 text-gray-500 border dark:border-zinc-700'}">${displayText.toUpperCase()}</button>`;
+            }).join('');
+
+            const filtered = state.habits.filter(h => !h.archived && (state.activeFilter === 'all' || h.category === state.activeFilter));
+            
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 glass-card text-gray-400 text-sm">Tidak ada kebiasaan aktif di kategori ini. Klik "Buat Kebiasaan Baru" untuk menanam!</div>`;
+                return;
+            }
+
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            container.innerHTML = filtered.map(h => {
+                const isDone = h.lastCompletedDate === todayStr;
+                return `
+                    <div class="glass-card p-5 flex flex-col justify-between border-l-4 ${isDone ? 'border-l-emerald-400' : 'border-l-amber-300'}">
+                        <div class="flex justify-between items-start gap-2">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">${h.category}</span>
+                                    <span class="text-[10px] uppercase font-bold text-gray-400"><i class="far fa-clock"></i> Pukul ${h.time}</span>
+                                </div>
+                                <h4 class="font-bold text-base mt-2 ${isDone ? 'line-through text-gray-400 dark:text-zinc-500' : ''}">${h.name}</h4>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="openHabitModal('${h.id}')" class="p-1.5 text-xs text-gray-400 hover:text-blue-500 transition" title="Ubah"><i class="fas fa-edit"></i></button>
+                                <button onclick="archiveHabit('${h.id}')" class="p-1.5 text-xs text-gray-400 hover:text-orange-500 transition" title="Arsipkan"><i class="fas fa-archive"></i></button>
+                                <button onclick="deleteHabit('${h.id}')" class="p-1.5 text-xs text-gray-400 hover:text-red-500 transition" title="Hapus"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between pt-4 mt-4 border-t border-gray-100 dark:border-zinc-800">
+                            <span class="text-xs font-semibold text-gray-400">Total Selesai: <strong class="text-gray-700 dark:text-gray-200">${h.completionsCount || 0} Kali</strong></span>
+                            <button onclick="toggleCompleteHabit('${h.id}')" class="px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition transform active:scale-95 ${isDone ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-gradient-to-r from-pink-400 to-purple-400 text-white hover:opacity-95'}">
+                                ${isDone ? '<i class="fas fa-check-circle"></i> Sudah Mekar' : 'Selesaikan Rutinitas'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterHabits(cat) {
+            state.activeFilter = cat;
+            renderHabitsList();
+        }
+
+        // MESIN EDIT / SIMPAN AKSI FORMULIR KEBIASAAN
+        function openHabitModal(id = null) {
+            const modal = document.getElementById('habitCreationFormModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            if (id) {
+                const h = state.habits.find(item => item.id === id);
+                document.getElementById('modalFormActionTitle').innerText = "Ubah Tanaman Kebiasaan";
+                document.getElementById('modalHabitIdTarget').value = h.id;
+                document.getElementById('formHabitName').value = h.name;
+                document.getElementById('formHabitCategory').value = h.category;
+                document.getElementById('formHabitPriority').value = h.priority;
+                document.getElementById('formHabitDifficulty').value = h.difficulty;
+                document.getElementById('formHabitTime').value = h.time;
+            } else {
+                document.getElementById('modalFormActionTitle').innerText = "Konfigurasi Rutinitas Kebiasaan";
+                document.getElementById('modalHabitIdTarget').value = "";
+                document.getElementById('formHabitName').value = "";
+                document.getElementById('formHabitTime').value = "08:00";
+            }
+        }
+
+        function closeHabitModal() {
+            const modal = document.getElementById('habitCreationFormModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function commitHabitFormToState() {
+            const id = document.getElementById('modalHabitIdTarget').value;
+            const name = document.getElementById('formHabitName').value.trim();
+            const category = document.getElementById('formHabitCategory').value;
+            const priority = document.getElementById('formHabitPriority').value;
+            const difficulty = document.getElementById('formHabitDifficulty').value;
+            const time = document.getElementById('formHabitTime').value;
+
+            if (!name) { alert("Harap isi nama judul kebiasaan dengan benar!"); return; }
+
+            if (id) {
+                // Perbarui record yang sudah ada
+                const h = state.habits.find(item => item.id === id);
+                h.name = name; h.category = category; h.priority = priority; h.difficulty = difficulty; h.time = time;
+            } else {
+                // Masukkan data entitas baru
+                state.habits.push({
+                    id: 'habit_' + Date.now(), name, category, priority, difficulty, time,
+                    completionsCount: 0, lastCompletedDate: null, archived: false
+                });
+                triggerCelebrationAnimationEffect(0.3);
+            }
+
+            persistState();
+            closeHabitModal();
+            updateApplicationDOM();
+        }
+
+        function toggleCompleteHabit(id) {
+            const h = state.habits.find(item => item.id === id);
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            if (h.lastCompletedDate === todayStr) {
+                // Batalkan penyelesaian jika tidak sengaja ter-klik
+                h.lastCompletedDate = null;
+                if (h.completionsCount > 0) h.completionsCount--;
+                state.xp = Math.max(0, state.xp - 40);
+                state.coins = Math.max(0, state.coins - 10);
+                state.streak = Math.max(0, state.streak - 1);
+            } else {
+                // Atur indikator keberhasilan selesai
+                h.lastCompletedDate = todayStr;
+                h.completionsCount = (h.completionsCount || 0) + 1;
+                
+                // Algoritma perhitungan hadiah tingkat kesulitan
+                let rewardXp = 40;
+                if (h.difficulty === 'Mudah') rewardXp = 20;
+                if (h.difficulty === 'Sulit') rewardXp = 60;
+
+                state.xp += rewardXp;
+                state.coins += 15;
+                state.streak += 1;
+                if (state.streak > state.longestStreak) state.longestStreak = state.streak;
+
+                // Masukkan ke dalam matriks kalender heatmap tanggal hari ini
+                state.historyMatrix[todayStr] = (state.historyMatrix[todayStr] || 0) + 1;
+
+                triggerCelebrationAnimationEffect(0.6);
+                animateBunnyReaction(COMPANION_EMOJIS.CELEBRATING, "Wow! Itu kerja keras yang luar biasa! Pertahankan!");
+            }
+
+            persistState();
+            updateApplicationDOM();
+        }
+
+        function archiveHabit(id) {
+            const h = state.habits.find(item => item.id === id);
+            h.archived = true;
+            persistState(); updateApplicationDOM();
+        }
+
+        function deleteHabit(id) {
+            if (confirm("Apakah kamu yakin ingin menghapus entitas kebiasaan ini secara permanen dari sistem?")) {
+                state.habits = state.habits.filter(item => item.id !== id);
+                persistState(); updateApplicationDOM();
+            }
+        }
+
+        // LOGIKA INPUT JURNAL HARIAN
+        function saveJournalEntry() {
+            const text = document.getElementById('journalText').value.trim();
+            const gratitude = document.getElementById('journalGratitude').value.trim();
+            const rawTags = document.getElementById('journalTags').value;
+
+            if (!text) { alert("Harap isi pemikiran atau refleksi Anda terlebih dahulu!"); return; }
+
+            const tags = rawTags.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            
+            state.journal.unshift({
+                id: 'j_' + Date.now(),
+                date: new Date().toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' }),
+                text, gratitude, tags
+            });
+
+            state.xp += 15; // Insentif mengisi jurnal refleksi harian
+            
+            // Bersihkan semua input form setelah sukses disimpan
+            document.getElementById('journalText').value = "";
+            document.getElementById('journalGratitude').value = "";
+            document.getElementById('journalTags').value = "";
+
+            persistState();
+            updateApplicationDOM();
+            triggerCelebrationAnimationEffect(0.4);
+        }
+
+        function renderJournal() {
+            const container = document.getElementById('journalContainer');
+            const query = document.getElementById('journalSearch').value.toLowerCase();
+
+            const filtered = state.journal.filter(j => j.text.toLowerCase().includes(query) || j.gratitude.toLowerCase().includes(query));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="p-6 glass-card text-center text-gray-400 text-sm">Tidak ada lembar catatan refleksi yang cocok dengan teks pencarian tersebut.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(j => `
+                <div class="glass-card p-5 space-y-2">
+                    <div class="flex justify-between text-xs text-gray-400 font-bold">
+                        <span><i class="far fa-calendar-alt"></i> Ditulis pada: ${j.date}</span>
+                        <button onclick="deleteJournalEntry('${j.id}')" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
+                    </div>
+                    ${j.gratitude ? `<div class="text-sm bg-pink-50/70 dark:bg-zinc-800/60 p-2.5 rounded-xl border border-pink-100/50 dark:border-zinc-700/50 text-pink-700 dark:text-pink-300 font-medium"><strong>Bersyukur atas:</strong> ${j.gratitude}</div>` : ''}
+                    <p class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">${j.text}</p>
+                    <div class="flex flex-wrap gap-1 pt-1">
+                        ${j.tags.map(t => `<span class="bg-gray-100 dark:bg-zinc-800 px-2 py-0.5 rounded text-[10px] text-gray-500 font-medium">#${t}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteJournalEntry(id) {
+            if (confirm("Hapus halaman memori jurnal ini dari sistem log?")) {
+                state.journal = state.journal.filter(j => j.id !== id);
+                persistState(); renderJournal();
+            }
+        }
+
+        // MEKANISME PELACAK SUASANA HATI (MOOD)
+        function logMood(emoji, label) {
+            state.moodLogs.unshift({
+                id: 'mood_' + Date.now(),
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                date: new Date().toLocaleDateString('id-ID', { month: 'short', day: 'numeric' }),
+                emoji, label
+            });
+
+            state.coins += 5; // Hadiah koin kecil karena rajin melacak kondisi emosi diri
+            persistState();
+            updateApplicationDOM();
+            triggerCelebrationAnimationEffect(0.2);
+            animateBunnyReaction(COMPANION_EMOJIS.EXCITED, `Mood tercatat: ${label}! Terima kasih sudah berbagi cerita!`);
+        }
+
+        function renderMoodView() {
+            const container = document.getElementById('moodHistoryList');
+            if (state.moodLogs.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-gray-400 text-xs">Belum ada suasana hati yang tercatat hari ini. Pilih opsi di atas!</div>`;
+                return;
+            }
+
+            container.innerHTML = state.moodLogs.slice(0, 10).map(m => `
+                <div class="flex justify-between items-center py-2.5 text-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">${m.emoji}</span>
+                        <div>
+                            <div class="font-bold text-gray-800 dark:text-gray-200">${m.label}</div>
+                            <div class="text-[10px] text-gray-400">${m.date} pada pukul ${m.timestamp}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Perbarui grafik distribusi diagram lingkaran emosi
+            updateMoodChartDistributionEngine();
+        }
+
+        // BOUTIQUE BURSA PASAR REWARD UTAMA TOKO KOIN
+        function renderShopUI() {
+            const container = document.getElementById('shopItemsDisplayGrid');
+            container.innerHTML = state.shopInventory.map(item => `
+                <div class="glass-card p-5 text-center flex flex-col justify-between items-center relative">
+                    <div class="text-5xl my-3 filter drop-shadow-sm">${item.icon}</div>
+                    <h4 class="font-bold text-base text-gray-800 dark:text-white">${item.name}</h4>
+                    <p class="text-xs text-gray-400 capitalize mt-0.5">Modifikasi Kategori ${item.type}</p>
+                    
+                    <button onclick="purchaseShopItem('${item.id}')" ${item.acquired ? 'disabled' : ''} class="w-full mt-4 py-2 rounded-xl text-xs font-bold tracking-wide transition ${item.acquired ? 'bg-gray-100 text-gray-400 dark:bg-zinc-800 cursor-not-allowed' : 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md active:scale-95'}" >
+                        ${item.acquired ? 'Sudah Dibuka & Aktif' : `<i class="fas fa-coins text-amber-200 mr-1"></i> Beli seharga ${item.cost} Koin`}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function purchaseShopItem(id) {
+            const item = state.shopInventory.find(i => i.id === id);
+            if (state.coins < item.cost) { alert("Saldo koin emas tidak mencukupi! Selesaikan lebih banyak tugas rutin harian."); return; }
+
+            state.coins -= item.cost;
+            item.acquired = true;
+            
+            persistState();
+            updateApplicationDOM();
+            triggerCelebrationAnimationEffect(0.8);
+            animateBunnyReaction(COMPANION_EMOJIS.CHAMPION, `Luar biasa! Kita berhasil membuka akses item: ${item.name}!`);
+        }
+
+        // INTERAKSI PENGGUNA DENGAN MASKOT KELINCI VIRTUAL
+        function interactWithBunny() {
+            const responses = [
+                "Boing! Hehe itu geli sekali! 😄",
+                "Apakah kamu sudah meminum cukup air putih hari ini agar tetap sehat?",
+                "Aku merasa sangat berenergi melihat grafik kemajuan kebiasaanmu terbang tinggi!",
+                "Ingat: Langkah kecil atomik yang konsisten setiap hari akan membuahkan hasil besar!",
+                "Mari hancurkan target kebiasaan rutinitas hari ini dengan sempurna!"
+            ];
+            const randTxt = responses[Math.floor(Math.random() * responses.length)];
+            animateBunnyReaction(COMPANION_EMOJIS.EXCITED, randTxt);
+            triggerCelebrationAnimationEffect(0.3);
+        }
+
+        function animateBunnyReaction(emoji, speech) {
+            const el = document.getElementById('mainBunnyAvatar');
+            const b = document.getElementById('bunnySpeechBubble');
+            
+            el.innerText = emoji;
+            b.innerText = `"${speech}"`;
+
+            // Kembalikan ke wajah bahagia standar secara otomatis setelah penundaan 5 detik
+            setTimeout(() => {
+                el.innerText = COMPANION_EMOJIS.HAPPY;
+            }, 5000);
+        }
+
+        // SISTEM PELUNCUR MISI BERANDA
+        function renderDashboardQuests() {
+            const container = document.getElementById('questsContainer');
+            // Misi statis dihitung langsung berdasarkan status runtime sistem
+            const quests = [
+                { title: 'Menanam Benih Grid Pertama', desc: 'Memiliki daftar kebiasaan aktif dalam katalog.', progress: state.habits.length ? '100%' : '0%', icon: 'fa-seedling', col: 'text-emerald-500' },
+                { title: 'Pakar Refleksi Jurnal', desc: 'Menulis minimal satu halaman log refleksi dalam buku catatan.', progress: state.journal.length > 0 ? '100%' : '0%', icon: 'fa-book', col: 'text-purple-500' },
+                { title: 'Tabungan Koin Melimpah', desc: 'Mengumpulkan saldo koin hingga menyentuh angka target 200.', progress: `${Math.min(100, Math.round((state.coins / 200) * 100))}%`, icon: 'fa-coins', col: 'text-amber-500' }
+            ];
+
+            container.innerHTML = quests.map(q => `
+                <div class="bg-white/80 dark:bg-zinc-800/80 p-3.5 rounded-2xl flex items-center gap-4 border border-gray-100 dark:border-zinc-700/40">
+                    <div class="text-xl ${q.col}"><i class="fas ${q.icon}"></i></div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-sm text-gray-800 dark:text-white truncate">${q.title}</h4>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 truncate">${q.desc}</p>
+                    </div>
+                    <span class="text-xs font-bold text-gray-500 bg-gray-100 dark:bg-zinc-700 px-2.5 py-1 rounded-lg">${q.progress}</span>
+                </div>
+            `).join('');
+        }
+
+        // UTALITAS REKAYASA HEATMAP KALENDER
+        function generateDynamicMockHistoryMatrix() {
+            // Memastikan data aktivitas dasar terisi agar kotak kalender tidak kosong
+            const today = new Date();
+            for (let i = 0; i < 28; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const k = d.toISOString().split('T')[0];
+                if (!state.historyMatrix[k]) {
+                    state.historyMatrix[k] = (i % 3 === 0) ? (i % 2 + 1) : 0;
+                }
+            }
+        }
+
+        function renderDashboardHeatmap() {
+            const container = document.getElementById('dashboardHeatmap');
+            container.innerHTML = "";
+            
+            const today = new Date();
+            for (let i = 27; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const k = d.toISOString().split('T')[0];
+                const count = state.historyMatrix[k] || 0;
+
+                let color = 'bg-gray-100 dark:bg-zinc-800';
+                if (count === 1) color = 'bg-emerald-200 dark:bg-emerald-950';
+                if (count === 2) color = 'bg-emerald-300 dark:bg-emerald-800';
+                if (count >= 3) color = 'bg-emerald-500 dark:bg-emerald-600';
+
+                const cell = document.createElement('div');
+                cell.className = `heatmap-cell ${color}`;
+                cell.title = `${k}: Berhasil menyelesaikan ${count} kebiasaan mekar`;
+                cell.onclick = () => alert(`Log Masuk Tanggal: [${k}]\nTotal Berhasil: ${count} rutinitas terekam.`);
+                container.appendChild(cell);
+            }
+        }
+
+        function renderBadgesGrid() {
+            const container = document.getElementById('settingsBadgesDisplayGrid');
+            container.innerHTML = REWARD_BADGES.map(badge => {
+                const unlocked = badge.condition(state);
+                return `
+                    <div class="p-4 glass-card flex flex-col items-center justify-center ${unlocked ? 'opacity-100' : 'opacity-40 filter grayscale'}">
+                        <div class="text-4xl filter drop-shadow-sm">${badge.icon}</div>
+                        <h4 class="font-bold text-xs mt-2 text-gray-800 dark:text-white truncate max-w-full">${badge.name}</h4>
+                        <p class="text-[9px] text-gray-400 mt-0.5 leading-snug">${badge.desc}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // DETAIL OPERASIONAL PIPA INTEGRASI CHART.JS
+        let instanceWeeklyChart = null;
+        let instanceCategoryChart = null;
+        let instanceMoodChart = null;
+
+        function renderChartsEngines() {
+            const active = state.habits.filter(h => !h.archived);
+            if (active.length > 0) {
+                const best = [...active].sort((a,b) => (b.completionsCount||0) - (a.completionsCount||0))[0];
+                document.getElementById('analyticsBestHabit').innerText = best.name;
+                document.getElementById('analyticsTopCategory').innerText = best.category;
+            }
+            document.getElementById('analyticsLongestStreak').innerText = `${state.longestStreak} Hari`;
+            document.getElementById('analyticsBestDay').innerText = "Rabu"; // Baseline hari produktif standar
+
+            // 1. Grafik Dinamika Penyelesaian Mingguan
+            const ctxWeekly = document.getElementById('chartWeeklyAnalytics');
+            if (ctxWeekly) {
+                if (instanceWeeklyChart) instanceWeeklyChart.destroy();
+                instanceWeeklyChart = new Chart(ctxWeekly.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
+                        datasets: [{
+                            label: 'Volume Selesai',
+                            data: [3, 5, 4, 7, 3, 2, 6],
+                            borderColor: '#84CC16',
+                            backgroundColor: 'rgba(216, 255, 227, 0.4)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                });
+            }
+
+            // 2. Grafik Kontribusi Kategori Diagram Lingkaran
+            const ctxCat = document.getElementById('chartCategoryAnalytics');
+            if (ctxCat) {
+                if (instanceCategoryChart) instanceCategoryChart.destroy();
+                instanceCategoryChart = new Chart(ctxCat.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Belajar', 'Kesehatan', 'Keuangan', 'Lainnya'],
+                        datasets: [{
+                            data: [35, 25, 15, 25],
+                            backgroundColor: ['#D6EEFF', '#FFD6E7', '#E5D4FF', '#D8FFE3']
+                        }]
+                    },
+                    options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } } }
+                });
+            }
+        }
+
+        function updateMoodChartDistributionEngine() {
+            const ctxMood = document.getElementById('moodDistributionChart');
+            if (!ctxMood) return;
+
+            const counts = { 'Luar Biasa': 0, Bahagia: 0, Tenang: 0, 'Biasa Saja': 0, Sedih: 0, Stres: 0, Lelah: 0 };
+            state.moodLogs.forEach(m => { if (counts[m.label] !== undefined) counts[m.label]++; });
+
+            if (instanceMoodChart) instanceMoodChart.destroy();
+            instanceMoodChart = new Chart(ctxMood.getContext('2d'), {
+                type: 'polarArea',
+                data: {
+                    labels: Object.keys(counts),
+                    datasets: [{
+                        data: Object.values(counts),
+                        backgroundColor: ['#FFD6E7', '#FFF9F2', '#D6EEFF', '#E5D4FF', '#D8FFE3', '#FCA5A5', '#CBD5E1']
+                    }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { r: { grid: { display: false }, ticks: { display: false } } } }
+            });
+        }
+
+        // SISTEM KENDALAI MANAJEMEN TEMA GAYA
+        function setThemeStyle(mode) {
+            state.theme = mode;
+            persistState();
+            
+            document.body.classList.remove('dark-mode', 'pastel-mode');
+            if (mode === 'dark') document.body.classList.add('dark-mode');
+            if (mode === 'pastel') document.body.classList.add('pastel-mode');
+        }
+
+        // UTALITAS MANAJEMEN EKSPOR / IMPOR DATA CADANGAN JSON
+        function exportApplicationJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `habitbloom_cadangan_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importApplicationJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.habits && parsed.xp !== undefined) {
+                        state = parsed;
+                        persistState();
+                        updateApplicationDOM();
+                        alert("File cadangan data eksternal berhasil dipulihkan dengan sukses!");
+                    } else { alert("Format data cadangan tidak dikenali oleh struktur internal sistem."); }
+                } catch (err) { alert("Terjadi kesalahan kompilasi saat membaca file JSON."); }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearResetSystemData() {
+            if (confirm("PERINGATAN KRITIKAL: Operasi ini akan menghapus seluruh data kebiasaan, koin, level, dan seluruh riwayat jurnal Anda secara permanen dari browser. Lanjutkan?")) {
+                localStorage.removeItem('habit_bloom_premium_save');
+                window.location.reload();
+            }
+        }
+
+        // DISPATCHER EMISI CELEBRATION CONFETTI
+        function triggerCelebrationAnimationEffect(ratioDensity = 0.5) {
+            confetti({
+                particleCount: Math.round(120 * ratioDensity),
+                spread: 60,
+                origin: { y: 0.65 },
+                colors: ['#FFD6E7', '#E5D4FF', '#D6EEFF', '#D8FFE3', '#FBBF24']
+            });
+        }
+    </script>
+</body>
+</html>
