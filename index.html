@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HabitBloom — Tumbuhkan Kebiasaan Baikmu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --soft-pink: #FFD6E7;
+            --lavender: #E5D4FF;
+            --baby-blue: #D6EEFF;
+            --mint-green: #D8FFE3;
+            --cream: #FFF9F2;
+            --text-dark: #4A4A4A;
+        }
+
+        body {
+            background-color: var(--cream);
+            color: var(--text-dark);
+            font-family: 'Quicksand', 'Segoe UI', system-ui, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Gaya Tema yang diubah via JS */
+        body.dark-mode {
+            --cream: #1A1A1E;
+            --text-dark: #F5F5F7;
+            background-color: #121214;
+        }
+
+        body.pastel-mode {
+            background: linear-gradient(135deg, var(--soft-pink), var(--baby-blue), var(--lavender));
+        }
+
+        /* UI Glassmorphism Premium */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.dark-mode .glass-card {
+            background: rgba(30, 30, 34, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.08);
+        }
+
+        /* Mekanisme Navigasi */
+        .nav-btn {
+            transition: all 0.2s ease;
+            border-radius: 16px;
+        }
+        .nav-btn.active {
+            background-color: var(--baby-blue);
+            color: #1E40AF;
+            font-weight: 700;
+        }
+        body.dark-mode .nav-btn.active {
+            background-color: #2D2D35;
+            color: #38BDF8;
+        }
+
+        /* Animasi Kelinci Dinamis */
+        .bunny-container {
+            position: relative;
+            display: inline-block;
+        }
+        .bunny-animation {
+            animation: bunnyBounce 2.4s ease-in-out infinite;
+            display: inline-block;
+            transform-origin: bottom center;
+        }
+        @keyframes bunnyBounce {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(-12px) scaleY(1.02); }
+            70% { transform: translateY(0) scaleY(0.98); }
+        }
+        .bunny-blink {
+            animation: bunnyBlink 4s infinite;
+        }
+        @keyframes bunnyBlink {
+            0%, 90%, 100% { opacity: 1; }
+            95% { opacity: 0.1; }
+        }
+
+        /* Grid Heatmap Kalender */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .heatmap-cell:hover {
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        /* Scrollbar Kustom */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--lavender); border-radius: 10px; }
+        body.dark-mode ::-webkit-scrollbar-thumb { background: #3E3E4A; }
+        
+        /* Diperbarui: Mengoptimalkan scrollbar dan container content-wrapper pada mode HP */
+        @media (max-width: 767px) {
+            .mobile-content-fix {
+                height: calc(100vh - 70px) !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen overflow-hidden">
+
+    <nav class="w-full md:w-64 bg-white/80 dark:bg-[#1E1E24]/80 backdrop-blur-md border-t md:border-t-0 md:border-r border-gray-200/50 dark:border-gray-800/50 p-2 sm:p-4 flex flex-row md:flex-col justify-between items-center z-50 order-2 md:order-1 fixed bottom-0 left-0 right-0 md:relative">
+        <div class="flex md:flex-col items-center md:items-start w-full justify-between md:justify-start gap-4">
+            <div class="text-xl md:text-2xl font-bold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent flex items-center gap-2 mb-0 md:mb-8 pl-2 md:pl-0">
+                <i class="fas fa-seedling text-pink-400"></i>
+                <span class="hidden md:inline">HabitBloom</span>
+            </div>
+            
+            <div class="flex flex-row md:flex-col gap-1 w-full justify-around md:justify-start overflow-x-auto md:overflow-visible py-1">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-1.5 sm:px-4 text-xs sm:text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-th-large text-lg"></i> <span class="text-[10px] sm:text-xs md:text-sm md:inline">Beranda</span>
+                </button>
+                <button onclick="switchTab('tracker')" id="nav-tracker" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-1.5 sm:px-4 text-xs sm:text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-calendar-check text-lg"></i> <span class="text-[10px] sm:text-xs md:text-sm md:inline">Kebiasaan</span>
+                </button>
+                <button onclick="switchTab('journal')" id="nav-journal" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-1.5 sm:px-4 text-xs sm:text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-book-open text-lg"></i> <span class="text-[10px] sm:text-xs md:text-sm md:inline">Jurnal</span>
+                </button>
+                <button onclick="switchTab('mood')" id="nav-mood" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-1.5 sm:px-4 text-xs sm:text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-smile text-lg"></i> <span class="text-[10px] sm:text-xs md:text-sm md:inline">Suasana</span>
+                </button>
+                <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-1.5 sm:px-4 text-xs sm:text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-chart-pie text-lg"></i> <span class="text-[10px] sm:text-xs md:text-sm md:inline">Analitik</span>
+                </button>
+                <button onclick="switchTab('shop')" id="nav-shop" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-1.5 sm:px-4 text-xs sm:text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-shopping-bag text-lg"></i> <span class="text-[10px] sm:text-xs md:text-sm md:inline">Toko</span>
+                </button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-1.5 sm:px-4 text-xs sm:text-sm w-auto md:w-full text-gray-600 dark:text-gray-300">
+                    <i class="fas fa-cog text-lg"></i> <span class="text-[10px] sm:text-xs md:text-sm md:inline">Setelan</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="hidden md:block w-full mt-auto pt-4 border-t border-gray-200/40 dark:border-gray-800/40">
+            <div class="bg-gradient-to-br from-pink-100 to-purple-100 dark:from-purple-950/40 dark:to-pink-950/40 p-4 rounded-2xl text-center">
+                <span class="text-xs uppercase font-bold tracking-wider text-purple-600 dark:text-purple-300" id="profileLevelName">Pemula</span>
+                <div class="text-xl font-bold text-gray-800 dark:text-white mt-0.5">Level <span id="profileLevelNum">1</span></div>
+                <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
+                    <div id="profileXpBar" class="h-full bg-gradient-to-r from-pink-400 to-purple-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div class="text-[10px] text-gray-500 dark:text-gray-400 mt-1"><span id="profileXpText">0/500</span> XP</div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 order-1 md:order-2 pb-24 md:pb-8 mobile-content-fix">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 bg-white/40 dark:bg-zinc-900/40 p-4 rounded-3xl backdrop-blur-sm">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold" id="greetingMessage">Selamat pagi, Tukang Kebun! ✨</h1>
+                <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Mari kita rawat kebiasaanmu hari ini.</p>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                <div class="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-950/50 px-3 py-1.5 rounded-full text-amber-700 dark:text-amber-300 font-bold text-xs sm:text-sm">
+                    <i class="fas fa-coins text-amber-500"></i> <span id="headerCoins">0</span> Koin
+                </div>
+                <div class="flex items-center gap-1.5 bg-pink-100 dark:bg-pink-950/50 px-3 py-1.5 rounded-full text-pink-700 dark:text-pink-300 font-bold text-xs sm:text-sm">
+                    <i class="fas fa-fire text-pink-500"></i> <span id="headerStreak">0</span> Hari Streak
+                </div>
+            </div>
+        </header>
+
+        <section id="view-dashboard" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass-card p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                    <div class="absolute top-3 right-3 text-xs bg-white/80 dark:bg-zinc-800/80 px-2.5 py-1 rounded-full font-medium" id="bunnyStateBadge">Senang</div>
+                    <div class="bunny-container my-4">
+                        <span id="mainBunnyAvatar" class="bunny-animation text-7xl sm:text-8xl select-none">🐰</span>
+                    </div>
+                    <h3 class="font-bold text-lg">Barnaby si Kelinci</h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 max-w-[200px] mt-1" id="bunnySpeechBubble">"Kamu luar biasa! Terus siram kebiasaan baikmu ya!"</p>
+                    <button onclick="interactWithBunny()" class="mt-4 text-xs bg-pink-200 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 font-bold px-4 py-2 rounded-full hover:scale-105 active:scale-95 transition">Elus Barnaby</button>
+                </div>
+
+                <div class="glass-card p-6 lg:col-span-2 flex flex-col sm:flex-row items-center gap-6 relative">
+                    <div class="text-7xl sm:text-9xl p-4 select-none filter drop-shadow-md transition-all duration-700 transform hover:scale-110" id="mainPlantAvatar">🌱</div>
+                    <div class="flex-1 space-y-2 w-full">
+                        <div class="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Ekosistem Taman</div>
+                        <h3 class="text-xl sm:text-2xl font-bold">Pohon Kebiasaanmu: <span id="plantStageName" class="text-emerald-500">Tunas</span></h3>
+                        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Tamanmu akan tumbuh tinggi dan mekar dengan indah saat kamu menyelesaikan kebiasaan, menjaga streak, dan mencapai target konsistensi.</p>
+                        <div class="pt-2">
+                            <div class="flex justify-between text-xs font-semibold mb-1">
+                                <span>Progres Level Pertumbuhan</span>
+                                <span id="plantProgressPercent">40%</span>
+                            </div>
+                            <div class="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div id="plantProgressBar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-1000" style="width: 40%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Progres Harian</div>
+                    <div class="text-xl sm:text-2xl font-black text-blue-500 mt-1" id="dashDailyProgress">0%</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Mingguan</div>
+                    <div class="text-xl sm:text-2xl font-black text-purple-500 mt-1" id="dashWeeklyProgress">0%</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Konsistensi</div>
+                    <div class="text-xl sm:text-2xl font-black text-emerald-500 mt-1" id="dashOverallConsistency">0%</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">Skor XP</div>
+                    <div class="text-xl sm:text-2xl font-black text-pink-500 mt-1" id="dashTotalXp">0</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass-card p-6 lg:col-span-2 space-y-4">
+                    <h3 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-scroll text-yellow-500"></i> Misi Mekar Aktif</h3>
+                    <div id="questsContainer" class="space-y-3">
+                        </div>
+                </div>
+
+                <div class="glass-card p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400">Grid Aktivitas</h3>
+                        <span class="text-xs text-purple-500 font-semibold">4 Minggu Terakhir</span>
+                    </div>
+                    <div class="heatmap-grid" id="dashboardHeatmap">
+                        </div>
+                    <div class="flex justify-between text-[10px] text-gray-400 pt-1">
+                        <span>Kurang Aktif</span>
+                        <span>Sangat Mekar</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-tracker" class="tab-content hidden space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold">Pusat Kebun Rutinitas</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Budidayakan, pantau, dan konfigurasikan kebiasaan harianmu.</p>
+                </div>
+                <button onclick="openHabitModal()" class="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-pink-400 to-purple-500 text-white font-bold rounded-2xl shadow-md hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-plus"></i> Buat Kebiasaan Baru
+                </button>
+            </div>
+
+            <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-none" id="habitCategoryFilters">
+                <button onclick="filterHabits('all')" class="px-4 py-2 bg-white dark:bg-zinc-800 rounded-full text-xs font-bold whitespace-nowrap border border-gray-200/50 dark:border-gray-700/50 shadow-sm active hover:bg-gray-50">Semua</button>
+            </div>
+
+            <div id="habitsDisplayGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </section>
+
+        <section id="view-journal" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass-card p-6 h-fit space-y-4">
+                    <h2 class="text-xl font-bold">Refleksi Pemikiran Baru</h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Catatan Rasa Syukur</label>
+                            <input type="text" id="journalGratitude" placeholder="Satu hal yang kamu syukuri hari ini..." class="w-full p-3 rounded-xl border bg-white/50 dark:bg-zinc-800/50 dark:border-zinc-700 text-sm focus:outline-pink-300">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Refleksi Mendalam / Catatan</label>
+                            <textarea id="journalText" rows="4" placeholder="Bagaimana harimu berjalan? Target apa yang berhasil dicapai?" class="w-full p-3 rounded-xl border bg-white/50 dark:bg-zinc-800/50 dark:border-zinc-700 text-sm focus:outline-pink-300"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Label / Tags (Pisahkan dengan Koma)</label>
+                            <input type="text" id="journalTags" placeholder="belajar, produktif, olahraga" class="w-full p-3 rounded-xl border bg-white/50 dark:bg-zinc-800/50 dark:border-zinc-700 text-sm focus:outline-pink-300">
+                        </div>
+                        <button onclick="saveJournalEntry()" class="w-full py-3 bg-purple-500 text-white font-bold rounded-xl shadow hover:bg-purple-600 transition">Simpan Catatan Jurnal (+15 XP)</button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xl font-bold">Buku Catatan Refleksi</h3>
+                        <input type="text" id="journalSearch" oninput="renderJournal()" placeholder="Cari catatan..." class="p-2 text-xs rounded-xl border bg-white dark:bg-zinc-800 dark:border-zinc-700">
+                    </div>
+                    <div id="journalContainer" class="space-y-4">
+                        </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-mood" class="tab-content hidden space-y-8">
+            <div class="glass-card p-8 text-center max-w-2xl mx-auto space-y-6">
+                <h2 class="text-2xl font-bold">Bagaimana Suasana Hatimu Hari Ini?</h2>
+                </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Masukkan fungsi simulasi data kamu di bawah ini (switchTab, render, dll)
+        function switchTab(tabId) {
+            // Sembunyikan semua konten tab
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            // Tampilkan tab yang dipilih
+            const targetView = document.getElementById('view-' + tabId);
+            if(targetView) targetView.classList.remove('hidden');
+            
+            // Atur tombol navigasi aktif
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            const activeNav = document.getElementById('nav-' + tabId);
+            if(activeNav) activeNav.classList.add('active');
+        }
+    </script>
+</body>
+</html>
