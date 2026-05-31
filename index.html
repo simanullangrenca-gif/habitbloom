@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HabitBloom — Tumbuhkan Kebiasaan Baikmu</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --soft-pink: #FFD6E7;
+            --lavender: #E5D4FF;
+            --baby-blue: #D6EEFF;
+            --mint-green: #D8FFE3;
+            --cream: #FFF9F2;
+            --text-dark: #111827; /* Hitam Pekat murni demi kontras super tinggi */
+        }
+
+        body {
+            background-color: var(--cream);
+            color: var(--text-dark);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-mode {
+            --cream: #121214;
+            --text-dark: #F9FAFB;
+            background-color: #121214;
+        }
+
+        body.pastel-mode {
+            background: linear-gradient(135deg, var(--soft-pink), var(--baby-blue), var(--lavender));
+        }
+
+        /* Desain Kartu Kaca Premium (Kontras Dipertegas) */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.90);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(31, 38, 135, 0.06);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body.dark-mode .glass-card {
+            background: rgba(26, 26, 30, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(31, 38, 135, 0.12);
+        }
+
+        /* Tombol Navigasi Menu */
+        .nav-btn {
+            transition: all 0.2s ease;
+            border-radius: 16px;
+            color: #374151;
+        }
+        body.dark-mode .nav-btn {
+            color: #E5E7EB;
+        }
+        .nav-btn.active {
+            background-color: #3B82F6;
+            color: #FFFFFF !important;
+            font-weight: 800;
+        }
+        body.dark-mode .nav-btn.active {
+            background-color: #2563EB;
+            color: #FFFFFF !important;
+        }
+
+        /* Animasi Kelinci Lompat */
+        .bunny-animation {
+            animation: bunnyBounce 2.4s ease-in-out infinite;
+            display: inline-block;
+            transform-origin: bottom center;
+        }
+        @keyframes bunnyBounce {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(-14px) scaleY(1.03); }
+            70% { transform: translateY(0) scaleY(0.97); }
+        }
+
+        /* Grid Heatmap */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        @media (max-width: 767px) {
+            .mobile-scroll-area {
+                padding-bottom: 120px !important;
+            }
+        }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen overflow-hidden">
+
+    <nav class="w-full md:w-64 bg-white/95 dark:bg-[#1A1A1E]/95 backdrop-blur-md border-t md:border-t-0 md:border-r border-gray-300 dark:border-gray-800 p-2 sm:p-4 flex flex-row md:flex-col justify-between items-center z-50 order-2 md:order-1 fixed bottom-0 left-0 right-0 md:relative shadow-2xl md:shadow-none">
+        <div class="flex md:flex-col items-center md:items-start w-full justify-between md:justify-start gap-4">
+            <div class="text-xl md:text-2xl font-black bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2 mb-0 md:mb-8 hidden md:flex">
+                <i class="fas fa-seedling text-pink-600"></i>
+                <span>HabitBloom</span>
+            </div>
+            
+            <div class="flex flex-row md:flex-col gap-1 w-full justify-around md:justify-start overflow-x-auto md:overflow-visible py-1">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn active flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-2 w-full text-center md:text-left">
+                    <i class="fas fa-th-large text-lg"></i> <span class="text-[10px] md:text-sm font-black">Beranda</span>
+                </button>
+                <button onclick="switchTab('tracker')" id="nav-tracker" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-2 w-full text-center md:text-left">
+                    <i class="fas fa-calendar-check text-lg"></i> <span class="text-[10px] md:text-sm font-black">Kebiasaan</span>
+                </button>
+                <button onclick="switchTab('journal')" id="nav-journal" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-2 w-full text-center md:text-left">
+                    <i class="fas fa-book-open text-lg"></i> <span class="text-[10px] md:text-sm font-black">Jurnal</span>
+                </button>
+                <button onclick="switchTab('mood')" id="nav-mood" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-2 w-full text-center md:text-left">
+                    <i class="fas fa-smile text-lg"></i> <span class="text-[10px] md:text-sm font-black">Suasana</span>
+                </button>
+                <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-2 w-full text-center md:text-left">
+                    <i class="fas fa-chart-pie text-lg"></i> <span class="text-[10px] md:text-sm font-black">Analitik</span>
+                </button>
+                <button onclick="switchTab('shop')" id="nav-shop" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-2 w-full text-center md:text-left">
+                    <i class="fas fa-shopping-bag text-lg"></i> <span class="text-[10px] md:text-sm font-black">Toko</span>
+                </button>
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col md:flex-row items-center gap-1 md:gap-3 px-2 py-2 w-full text-center md:text-left">
+                    <i class="fas fa-cog text-lg"></i> <span class="text-[10px] md:text-sm font-black">Setelan</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="hidden md:block w-full mt-auto pt-4 border-t border-gray-300 dark:border-gray-700">
+            <div class="bg-gradient-to-br from-pink-100 to-purple-100 dark:from-purple-950/40 dark:to-pink-950/40 p-4 rounded-2xl text-center">
+                <span class="text-xs uppercase font-black tracking-wider text-purple-800 dark:text-purple-300" id="profileLevelName">Pemula</span>
+                <div class="text-xl font-black text-gray-900 dark:text-white mt-0.5">Level <span id="profileLevelNum">1</span></div>
+                <div class="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
+                    <div id="profileXpBar" class="h-full bg-gradient-to-r from-pink-500 to-purple-600 rounded-full transition-all duration-300" style="width: 20%"></div>
+                </div>
+                <div class="text-[10px] text-gray-800 dark:text-gray-300 font-bold mt-1"><span id="profileXpText">100/500</span> XP</div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 order-1 md:order-2 mobile-scroll-area">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 bg-white/80 dark:bg-zinc-900/90 p-5 rounded-3xl border border-gray-300 dark:border-gray-700 shadow-md">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black text-gray-900 dark:text-white" id="greetingMessage">Selamat bekerja, Tukang Kebun! ✨</h1>
+                <p class="text-xs sm:text-sm text-gray-800 dark:text-gray-300 font-bold">Kembangkan terus benih kebiasaan positifmu.</p>
+            </div>
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <div class="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-950/60 px-3 py-1.5 rounded-full text-amber-900 dark:text-amber-200 font-black text-xs sm:text-sm shadow">
+                    <i class="fas fa-coins text-amber-500"></i> <span id="headerCoins">50</span> Koin
+                </div>
+                <div class="flex items-center gap-1.5 bg-pink-100 dark:bg-pink-950/60 px-3 py-1.5 rounded-full text-pink-900 dark:text-pink-200 font-black text-xs sm:text-sm shadow">
+                    <i class="fas fa-fire text-pink-600"></i> <span id="headerStreak">3</span> Hari Streak
+                </div>
+            </div>
+        </header>
+
+        <section id="view-dashboard" class="tab-content space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass-card p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                    <div class="absolute top-3 right-3 text-xs bg-pink-200 text-pink-900 dark:bg-zinc-800 dark:text-pink-300 px-2.5 py-1 rounded-full font-black" id="bunnyStateBadge">Senang</div>
+                    <div class="bunny-container my-4">
+                        <span id="mainBunnyAvatar" class="bunny-animation text-7xl sm:text-8xl select-none">🐰</span>
+                    </div>
+                    <h3 class="font-black text-lg text-gray-900 dark:text-white">Barnaby si Kelinci</h3>
+                    <p class="text-xs text-gray-900 dark:text-gray-100 max-w-[220px] mt-1 font-bold" id="bunnySpeechBubble">"Kamu luar biasa! Terus siram kebiasaan baikmu ya!"</p>
+                    <button onclick="interactWithBunny()" class="mt-4 text-xs bg-pink-300 hover:bg-pink-400 dark:bg-pink-900/60 text-pink-950 dark:text-pink-200 font-black px-5 py-2.5 rounded-full transition shadow">Elus Barnaby</button>
+                </div>
+
+                <div class="glass-card p-6 lg:col-span-2 flex flex-col sm:flex-row items-center gap-6">
+                    <div class="text-8xl sm:text-9xl select-none filter drop-shadow-md transition-transform duration-500 hover:scale-110" id="mainPlantAvatar">🌱</div>
+                    <div class="flex-1 space-y-2 w-full">
+                        <div class="text-xs font-black uppercase tracking-widest text-emerald-800 dark:text-emerald-400">Ekosistem Taman</div>
+                        <h3 class="text-2xl font-black text-gray-900 dark:text-white">Pohon Kebiasaanmu: <span id="plantStageName" class="text-emerald-600 dark:text-emerald-400">Tunas Muda</span></h3>
+                        <p class="text-xs sm:text-sm text-gray-800 dark:text-gray-300 font-bold">Tanaman ini berkembang otomatis setiap kali kamu menyelesaikan target rutinitas harian.</p>
+                        <div class="pt-2">
+                            <div class="flex justify-between text-xs font-black mb-1 text-gray-900 dark:text-gray-300">
+                                <span>Progres Kedewasaan Pohon</span>
+                                <span id="plantProgressPercent">20%</span>
+                            </div>
+                            <div class="w-full h-3 bg-gray-300 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div id="plantProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-500" style="width: 20%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-black uppercase">Selesai Hari Ini</div>
+                    <div class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1" id="dashCompletedCount">0</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-black uppercase">Total Kebiasaan</div>
+                    <div class="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1" id="dashTotalCount">2</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-black uppercase">Kesehatan Mental</div>
+                    <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1" id="dashMoodState">Normal</div>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <div class="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-black uppercase">Akurasi Skor XP</div>
+                    <div class="text-2xl font-black text-pink-600 dark:text-pink-400 mt-1" id="dashXpDisplay">100</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass-card p-6 lg:col-span-2 space-y-4">
+                    <h3 class="text-lg font-black flex items-center gap-2 text-gray-900 dark:text-white"><i class="fas fa-scroll text-yellow-500"></i> Papan Misi Harian</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center bg-white/90 dark:bg-zinc-800/90 p-4 rounded-2xl border border-gray-300 dark:border-gray-700 shadow-sm">
+                            <div>
+                                <h4 class="text-sm font-black text-gray-900 dark:text-white">Penyiram Kebun Pemula</h4>
+                                <p class="text-xs text-gray-700 dark:text-gray-400 font-bold">Selesaikan minimal 1 rutinitas kebiasaan hari ini.</p>
+                            </div>
+                            <span class="text-xs font-black text-purple-800 bg-purple-100 dark:text-purple-300 dark:bg-purple-950 px-3 py-1.5 rounded-full">+50 XP</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 space-y-3">
+                    <h3 class="text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-400">Kalender Kontribusi</h3>
+                    <div class="heatmap-grid" id="heatmapContainer"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-tracker" class="tab-content hidden space-y-6">
+            <div class="glass-card p-6 space-y-4">
+                <h3 class="text-lg font-black text-gray-900 dark:text-white"><i class="fas fa-plus-circle text-blue-500"></i> Tambah Kebiasaan Baru</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input type="text" id="inputHabitName" placeholder="Nama Kebiasaan (contoh: Olahraga Pagi)" class="p-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-900 font-bold sm:col-span-1 focus:outline-blue-500">
+                    <select id="inputHabitCategory" class="p-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-900 font-bold focus:outline-blue-500">
+                        <option value="Kesehatan">Kesehatan 🍏</option>
+                        <option value="Produktivitas">Produktivitas 📚</option>
+                        <option value="Mental">Kesehatan Mental 🧠</option>
+                    </select>
+                    <button onclick="addNewHabit()" class="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black rounded-xl shadow hover:opacity-90 active:scale-95 transition">Tambah Rutinitas</button>
+                </div>
+            </div>
+
+            <div id="habitsListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
+
+        <section id="view-journal" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass-card p-6 h-fit space-y-4">
+                    <h2 class="text-xl font-black text-gray-900 dark:text-white">Tulis Refleksi Diri</h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-black uppercase text-gray-600 dark:text-gray-400 mb-1">Rasa Syukur Hari Ini</label>
+                            <input type="text" id="journalGratitude" placeholder="Hal manis yang terjadi hari ini..." class="w-full p-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-900 font-bold focus:outline-pink-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black uppercase text-gray-600 dark:text-gray-400 mb-1">Catatan Evaluasi / Pikiran</label>
+                            <textarea id="journalText" rows="4" placeholder="Ceritakan progres atau tantanganmu..." class="w-full p-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-900 font-bold focus:outline-pink-500"></textarea>
+                        </div>
+                        <button onclick="saveJournalEntry()" class="w-full py-3 bg-purple-600 text-white font-black rounded-xl shadow hover:bg-purple-700 transition">Simpan ke Buku Log (+15 XP)</button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 space-y-4">
+                    <h3 class="text-xl font-black text-gray-900 dark:text-white">Buku Log Jurnal Riwayat</h3>
+                    <div id="journalLogsWrapper" class="space-y-4"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-mood" class="tab-content hidden space-y-6">
+            <div class="glass-card p-8 text-center max-w-2xl mx-auto space-y-6">
+                <h2 class="text-2xl font-black text-gray-900 dark:text-white">Bagaimana Suasana Hatimu Saat Ini?</h2>
+                <p class="text-sm text-gray-700 dark:text-gray-300 font-bold">Pilih salah satu kondisi psikologis untuk memperbarui dasbor ekosistem.</p>
+                <div class="flex justify-center gap-4 sm:gap-6 flex-wrap text-5xl py-4">
+                    <button onclick="updateMoodState('Luar Biasa ✨', '😎')" class="hover:scale-125 transition transform">😎</button>
+                    <button onclick="updateMoodState('Bahagia / Senang', '😊')" class="hover:scale-125 transition transform">😊</button>
+                    <button onclick="updateMoodState('Biasa Saja / Produktif', '😐')" class="hover:scale-125 transition transform">😐</button>
+                    <button onclick="updateMoodState('Lelah / Mengantuk', '😴')" class="hover:scale-125 transition transform">😴</button>
+                    <button onclick="updateMoodState('Sedih / Stress', '😢')" class="hover:scale-125 transition transform">😢</button>
+                </div>
+                <div class="text-sm font-black text-purple-700 dark:text-purple-400">
+                    Status saat ini: <span id="currentMoodStatus">Normal</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-analytics" class="tab-content hidden space-y-6">
+            <div class="glass-card p-6 space-y-4">
+                <h2 class="text-xl font-black text-gray-900 dark:text-white">Metrik Progres Kebiasaan Nyata</h2>
+                <p class="text-xs text-gray-600 dark:text-gray-400 font-bold">Grafik ini otomatis naik setiap kali Anda mencentang tombol kebiasaan selesai.</p>
+                <div class="w-full max-h-[320px] relative">
+                    <canvas id="realAnalyticsChart" class="w-full h-64"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-shop" class="tab-content hidden space-y-6">
+            <h2 class="text-2xl font-black text-gray-900 dark:text-white">Pasar Tukar Koin</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="glass-card p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <span class="text-4xl">🐼</span>
+                        <div>
+                            <h3 class="font-black text-gray-900 dark:text-white">Teman Panda Besar</h3>
+                            <p class="text-xs text-gray-700 dark:text-gray-400 font-bold">Dapatkan pendamping baru untuk Barnaby.</p>
+                        </div>
+                    </div>
+                    <button onclick="buyShopItem(100, '🐼')" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2 rounded-xl text-xs shadow">100 Koin</button>
+                </div>
+                <div class="glass-card p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <span class="text-4xl">🦊</span>
+                        <div>
+                            <h3 class="font-black text-gray-900 dark:text-white">Rubah Emas Langka</h3>
+                            <p class="text-xs text-gray-700 dark:text-gray-400 font-bold">Membuka aura emas eksklusif pada profil.</p>
+                        </div>
+                    </div>
+                    <button onclick="buyShopItem(200, '🦊')" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2 rounded-xl text-xs shadow">200 Koin</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-settings" class="tab-content hidden space-y-6">
+            <div class="glass-card p-6 space-y-4">
+                <h2 class="text-xl font-black text-gray-900 dark:text-white">Setelan Tampilan Latar Belakang</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-white dark:bg-zinc-800 rounded-xl border border-gray-300 dark:border-gray-700">
+                        <span class="text-sm font-black text-gray-800 dark:text-gray-200">Mode Gradasi Pastel</span>
+                        <button onclick="setGlobalTheme('pastel')" class="px-4 py-2 bg-pink-500 text-white font-black rounded-xl text-xs shadow">Aktifkan</button>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-white dark:bg-zinc-800 rounded-xl border border-gray-300 dark:border-gray-700">
+                        <span class="text-sm font-black text-gray-800 dark:text-gray-200">Mode Gelap Kompak (Dark Mode)</span>
+                        <button onclick="setGlobalTheme('dark')" class="px-4 py-2 bg-gray-800 text-white font-black rounded-xl text-xs shadow">Aktifkan</button>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-white dark:bg-zinc-800 rounded-xl border border-gray-300 dark:border-gray-700">
+                        <span class="text-sm font-black text-gray-800 dark:text-gray-200">Kembalikan ke Mode Cream Asli</span>
+                        <button onclick="setGlobalTheme('clear')" class="px-4 py-2 bg-orange-600 text-white font-black rounded-xl text-xs shadow">Reset Default</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // DATA STATE UTAMA APLIKASI
+        let globalCoins = 50;
+        let globalXp = 100;
+        let globalLevel = 1;
+        let completedTodayCount = 0;
+        let totalHabitsCount = 2;
+
+        // DB Array Dummy yang berfungsi penuh secara dinamis
+        let habitsArray = [
+            { id: 1, name: "Minum Air Putih 2L", category: "Kesehatan", done: false, streak: 5, border: "border-l-blue-500" },
+            { id: 2, name: "Belajar Logika & Coding", category: "Produktivitas", done: false, streak: 2, border: "border-l-purple-500" }
+        ];
+
+        let journalLogsArray = [
+            { id: 1, date: "Hari Ini", category: "#SistemEvolusi", gratitude: "Layout mobile berjalan lancar", text: "Selesai merapikan kontras teks agar tidak bertabrakan dengan background visual aplikasi." }
+        ];
+
+        let chartInstance = null;
+        let trackingChartValues = [5, 7, 9, 4, 8, 0]; // Representasi performa mingguan
+
+        // 1. BOOTSTRAP INITIALIZER DATA
+        window.addEventListener('DOMContentLoaded', () => {
+            renderHabitCards();
+            renderJournalLogs();
+            renderHeatmapCells();
+            initAnalyticsChart();
+            updateUINumbers();
+        });
+
+        // 2. NAVIGASI SWITCH TAB SYSTEM
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            const view = document.getElementById('view-' + tabId);
+            if (view) view.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            const activeNav = document.getElementById('nav-' + tabId);
+            if (activeNav) activeNav.classList.add('active');
+        }
+
+        // 3. LOGIKA CORE HABIT TRACKER (TAMBAH & CHECKLIST NYATA)
+        function renderHabitCards() {
+            const container = document.getElementById('habitsListContainer');
+            container.innerHTML = "";
+            
+            habitsArray.forEach(habit => {
+                const card = document.createElement('div');
+                card.className = `glass-card p-5 flex justify-between items-center border-l-4 ${habit.border} ${habit.done ? 'opacity-60' : ''}`;
+                
+                card.innerHTML = `
+                    <div>
+                        <span class="text-xs font-black text-gray-500 uppercase tracking-wide">${habit.category}</span>
+                        <h3 class="text-base font-black text-gray-900 dark:text-white ${habit.done ? 'line-through text-gray-400' : ''}">${habit.name}</h3>
+                        <p class="text-xs text-gray-700 dark:text-gray-300 font-bold"><i class="fas fa-fire text-red-500"></i> Streak: ${habit.streak} Hari</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleCheckHabit(${habit.id})" class="w-10 h-10 rounded-full ${habit.done ? 'bg-blue-600 text-white' : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'} flex items-center justify-center transition shadow-sm">
+                            <i class="fas ${habit.done ? 'fa-undo text-sm' : 'fa-check text-base'}"></i>
+                        </button>
+                        <button onclick="deleteSelectedHabit(${habit.id})" class="w-10 h-10 rounded-full bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center transition">
+                            <i class="fas fa-trash-alt text-sm"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function addNewHabit() {
+            const nameInput = document.getElementById('inputHabitName');
+            const categorySelect = document.getElementById('inputHabitCategory');
+            
+            if (!nameInput.value.trim()) {
+                alert("Harap masukkan nama kebiasaan terlebih dahulu!");
+                return;
+            }
+
+            let borderColors = ["border-l-blue-500", "border-l-purple-500", "border-l-emerald-500", "border-l-pink-500"];
+            let randomBorder = borderColors[Math.floor(Math.random() * borderColors.length)];
+
+            const newHabit = {
+                id: Date.now(),
+                name: nameInput.value.trim(),
+                category: categorySelect.value,
+                done: false,
+                streak: 0,
+                border: randomBorder
+            };
+
+            habitsArray.push(newHabit);
+            nameInput.value = "";
+            
+            totalHabitsCount = habitsArray.length;
+            renderHabitCards();
+            updateUINumbers();
+            triggerExplosion();
+        }
+
+        function toggleCheckHabit(id) {
+            const index = habitsArray.findIndex(h => h.id === id);
+            if (index !== -1) {
+                habitsArray[index].done = !habitsArray[index].done;
+                
+                if (habitsArray[index].done) {
+                    habitsArray[index].streak += 1;
+                    globalCoins += 10;
+                    globalXp += 20;
+                    completedTodayCount += 1;
+                    trackingChartValues[5] += 1; // Naikkan grafik hari ini
+                    triggerExplosion();
+                } else {
+                    habitsArray[index].streak = Math.max(0, habitsArray[index].streak - 1);
+                    globalCoins = Math.max(0, globalCoins - 10);
+                    globalXp = Math.max(0, globalXp - 20);
+                    completedTodayCount = Math.max(0, completedTodayCount - 1);
+                    trackingChartValues[5] = Math.max(0, trackingChartValues[5] - 1);
+                }
+                
+                checkLevelUpLogic();
+                renderHabitCards();
+                updateUINumbers();
+                updateChartRender();
+            }
+        }
+
+        function deleteSelectedHabit(id) {
+            habitsArray = habitsArray.filter(h => h.id !== id);
+            totalHabitsCount = habitsArray.length;
+            renderHabitCards();
+            updateUINumbers();
+        }
+
+        // 4. LOGIKA INTEGRASI JURNAL NYATA
+        function renderJournalLogs() {
+            const logsWrapper = document.getElementById('journalLogsWrapper');
+            logsWrapper.innerHTML = "";
+
+            if (journalLogsArray.length === 0) {
+                logsWrapper.innerHTML = `<p class="text-sm font-bold text-gray-500 italic">Belum ada catatan refleksi tersimpan.</p>`;
+                return;
+            }
+
+            journalLogsArray.forEach(log => {
+                const item = document.createElement('div');
+                item.className = "glass-card p-5 space-y-2 border border-gray-300 dark:border-gray-700";
+                item.innerHTML = `
+                    <div class="flex justify-between text-xs font-black text-gray-600 dark:text-gray-400">
+                        <span>📅 ${log.date}</span>
+                        <span class="text-purple-600">${log.category}</span>
+                    </div>
+                    <h4 class="font-black text-gray-900 dark:text-white text-base">${log.gratitude}</h4>
+                    <p class="text-sm text-gray-800 dark:text-gray-300 font-bold">${log.text}</p>
+                `;
+                logsWrapper.appendChild(item);
+            });
+        }
+
+        function saveJournalEntry() {
+            const gratitudeVal = document.getElementById('journalGratitude');
+            const textVal = document.getElementById('journalText');
+
+            if (!gratitudeVal.value.trim() || !textVal.value.trim()) {
+                alert("Mohon isi kolom rasa syukur dan refleksi Anda!");
+                return;
+            }
+
+            const newLog = {
+                id: Date.now(),
+                date: "Baru Saja",
+                category: "#RefleksiMandiri",
+                gratitude: gratitudeVal.value.trim(),
+                text: textVal.value.trim()
+            };
+
+            journalLogsArray.unshift(newLog);
+            globalXp += 15;
+            
+            gratitudeVal.value = "";
+            textVal.value = "";
+            
+            checkLevelUpLogic();
+            renderJournalLogs();
+            updateUINumbers();
+            triggerExplosion();
+        }
+
+        // 5. UP-TO-DATE STATISTIK ENGINE UI
+        function updateUINumbers() {
+            document.getElementById('headerCoins').innerText = globalCoins;
+            document.getElementById('dashCompletedCount').innerText = completedTodayCount;
+            document.getElementById('dashTotalCount').innerText = totalHabitsCount;
+            document.getElementById('dashXpDisplay').innerText = globalXp;
+            document.getElementById('profileXpText').innerText = `${globalXp}/${globalLevel * 500}`;
+            document.getElementById('profileLevelNum').innerText = globalLevel;
+
+            let percentage = (globalXp / (globalLevel * 500)) * 100;
+            document.getElementById('profileXpBar').style.width = `${Math.min(percentage, 100)}%`;
+        }
+
+        function checkLevelUpLogic() {
+            let nextLevelXp = globalLevel * 500;
+            if (globalXp >= nextLevelXp) {
+                globalLevel += 1;
+                document.getElementById('profileLevelName').innerText = "Tukang Kebun Hebat";
+                document.getElementById('mainPlantAvatar').innerText = "🌳";
+                document.getElementById('plantStageName').innerText = "Pohon Rindang Melebar";
+                alert(`🎉 Selamat! Level Anda naik ke Level ${globalLevel}! Pohon Anda ikut bertumbuh menjadi Rindang!`);
+                triggerExplosion();
+            }
+        }
+
+        // 6. SUASANA HATI ENGINE
+        function updateMoodState(label, emoji) {
+            document.getElementById('dashMoodState').innerText = emoji;
+            document.getElementById('currentMoodStatus').innerText = `${emoji} ${label}`;
+            triggerExplosion();
+        }
+
+        // 7. TOKO SYSTEM
+        function buyShopItem(cost, itemEmoji) {
+            if (globalCoins >= cost) {
+                globalCoins -= cost;
+                updateUINumbers();
+                alert(`🎉 Sukses Membeli! Maskot ${itemEmoji} berhasil ditambahkan ke inventaris kebun Anda!`);
+                triggerExplosion();
+            } else {
+                alert("Koin Anda tidak cukup! Selesaikan lebih banyak rutinitas kebiasaan untuk menabung.");
+            }
+        }
+
+        // 8. TEMA CONTROLLER
+        function setGlobalTheme(mode) {
+            document.body.classList.remove('pastel-mode', 'dark-mode');
+            if (mode === 'dark') document.body.classList.add('dark-mode');
+            if (mode === 'pastel') document.body.classList.add('pastel-mode');
+        }
+
+        // 9. ANIMASI INTERAKTIF & CONFETTI
+        function interactWithBunny() {
+            const bubble = document.getElementById('bunnySpeechBubble');
+            const badge = document.getElementById('bunnyStateBadge');
+            badge.innerText = "❤️ Dimanja";
+            bubble.innerText = "Ahaha nyaman sekali elusannya! Terima kasih banyak, Tuan!";
+            setTimeout(() => {
+                badge.innerText = "Senang";
+                bubble.innerText = "\"Kamu luar biasa! Terus siram kebiasaan baikmu ya!\"";
+            }, 3000);
+            triggerExplosion();
+        }
+
+        function triggerExplosion() {
+            confetti({ particleCount: 90, spread: 65, origin: { y: 0.75 } });
+        }
+
+        // 10. GRID HEATMAP KONTRIBUSI GENERATOR
+        function renderHeatmapCells() {
+            const container = document.getElementById('heatmapContainer');
+            container.innerHTML = "";
+            for (let i = 0; i < 28; i++) {
+                const cell = document.createElement('div');
+                let colors = ["bg-gray-200 dark:bg-gray-700", "bg-emerald-200", "bg-emerald-400", "bg-emerald-600"];
+                let randomColor = colors[Math.floor(Math.random() * colors.length)];
+                cell.className = `heatmap-cell ${randomColor} cursor-pointer hover:scale-110`;
+                cell.title = `Hari ke-${i + 1} Terlacak`;
+                container.appendChild(cell);
+            }
+        }
+
+        // 11. GRAFIK BATANG ASLI JAVASCRIPT (CHART.JS)
+        function initAnalyticsChart() {
+            const ctx = document.getElementById('realAnalyticsChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
+                    datasets: [{
+                        label: 'Kebiasaan Selesai',
+                        data: trackingChartValues,
+                        backgroundColor: '#8B5CF6',
+                        borderColor: '#7C3AED',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { display: false } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function updateChartRender() {
+            if (chartInstance) {
+                chartInstance.data.datasets[0].data = trackingChartValues;
+                chartInstance.update();
+            }
+        }
+    </script>
+</body>
+</html>
